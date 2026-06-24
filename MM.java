@@ -23,6 +23,8 @@ public class MM {
 
             boolean idleMode = false;
 
+            System.out.println("Program started");
+
             while (true) {
                 Point currentPosition = MouseInfo.getPointerInfo().getLocation();
 
