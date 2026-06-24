@@ -5,59 +5,74 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.swing.*;
 
-/**
- * MouseMover - Move o mouse para posições aleatórias quando o usuário
- * estiver ausente por 5 minutos. O mouse é movido em intervalos aleatórios
- * entre 2 e 30 segundos.
- */
 public class MM {
+    private static final long IDLE_TIME_MS = 3 * 60 * 1000;
+    private static final long MONITOR_INTERVAL_MS = 500;
 
-//    static final long INACTIVITY_MS = 5 * 60 * 1000; // 5 minutos
-    static final long INACTIVITY_MS = 2000;
-    static final int  MIN_SEC = 2, MAX_SEC = 30;
+    public static void main(String[] args) {
+        try {
+            Robot robot = new Robot();
+            Random random = new Random();
 
-    public static void main(String[] args) throws Exception {
-        Robot robot = new Robot();
-        Random random = new Random();
-        AtomicLong lastActivity = new AtomicLong(System.currentTimeMillis());
+            Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+            int screenWidth = screenSize.width;
+            int screenHeight = screenSize.height;
 
-        // Detecta atividade do usuário (mouse + teclado)
-        Toolkit.getDefaultToolkit().addAWTEventListener(
-            e -> lastActivity.set(System.currentTimeMillis()),
-            AWTEvent.MOUSE_MOTION_EVENT_MASK | AWTEvent.MOUSE_EVENT_MASK | AWTEvent.KEY_EVENT_MASK
-        );
+            Point lastUserPosition = MouseInfo.getPointerInfo().getLocation();
+            long lastActivityTime = System.currentTimeMillis();
 
-        System.out.println("MouseMover iniciado. Ativará após 5 min de inatividade. Ctrl+C para sair.");
+            boolean idleMode = false;
 
-        boolean active = false;
+            while (true) {
+                Point currentPosition = MouseInfo.getPointerInfo().getLocation();
 
-        while (true) {
-            long idle = System.currentTimeMillis() - lastActivity.get();
+                if (!currentPosition.equals(lastUserPosition)) {
+                    lastActivityTime = System.currentTimeMillis();
+                    lastUserPosition = currentPosition;
 
-            if (idle >= INACTIVITY_MS) {
-                if (!active) {
-                    active = true;
-                    System.out.println("Usuário ausente. Iniciando movimentos...");
+                    if (idleMode) {
+                        idleMode = false;
+                    }
                 }
 
-                // Move o mouse para posição aleatória
-                Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
-                int x = random.nextInt(screen.width);
-                int y = random.nextInt(screen.height);
-                robot.mouseMove(x, y);
-                System.out.printf("Mouse movido para (%d, %d)%n", x, y);
+                long inactiveTime =
+                    System.currentTimeMillis() - lastActivityTime;
 
-                // Aguarda intervalo aleatório entre 2 e 30 segundos
-                int delaySec = MIN_SEC + random.nextInt(MAX_SEC - MIN_SEC + 1);
-                Thread.sleep(delaySec * 1000L);
-
-            } else {
-                if (active) {
-                    active = false;
-                    System.out.println("Usuário voltou. Pausando movimentos.");
+                if (!idleMode && inactiveTime >= IDLE_TIME_MS) {
+                    idleMode = true;
                 }
-                Thread.sleep(1000); // verifica inatividade a cada segundo
+
+                if (idleMode) {
+
+                    int x = random.nextInt(screenWidth);
+                    int y = random.nextInt(screenHeight);
+
+                    robot.mouseMove(x, y);
+
+                    Point expectedPosition = new Point(x, y);
+
+                    long delay = 500 + random.nextInt(2501);
+
+                    Thread.sleep(delay);
+
+                    Point actualPosition =
+                        MouseInfo.getPointerInfo().getLocation();
+
+                    if (!actualPosition.equals(expectedPosition)) {
+                        idleMode = false;
+                        lastActivityTime = System.currentTimeMillis();
+                        lastUserPosition = actualPosition;
+                    }
+                } else {
+                    Thread.sleep(MONITOR_INTERVAL_MS);
+                }
             }
+
+        } catch (AWTException e) {
+            System.err.println("Robot error: " + e.getMessage());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            System.out.println("Program interrupted");
         }
     }
 }
