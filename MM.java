@@ -32,6 +32,7 @@ public class MM {
 
                     if (idleMode) {
                         idleMode = false;
+                        System.out.println("User came back");
                     }
                 }
 
@@ -40,6 +41,7 @@ public class MM {
 
                 if (!idleMode && inactiveTime >= IDLE_TIME_MS) {
                     idleMode = true;
+                    System.out.println("Inactivity detected. Starting auto move");
                 }
 
                 if (idleMode) {
